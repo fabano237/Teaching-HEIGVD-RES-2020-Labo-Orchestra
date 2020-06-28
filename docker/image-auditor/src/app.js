@@ -31,13 +31,13 @@ const { v4: uuidv4 } = require('uuid');
 /*
  * New instances of map instrument and son
  */
-const instruments = new Map([
-                            ["piano", "ti-ta-ti"],
-                            ["trumpet",  "pouet"],
-                            ["flute",    "trulu"],
-                            ["violin", "gzi-gzi"],
-                            ["drum", "boum-boum"]
-                            ]);
+var instruments = new Map();
+instruments.set("ti-ta-ti", "piano");
+instruments.set("pouet", "trumpet");
+instruments.set("trulu", "flute");
+instruments.set("gzi-gzi", "violin");
+instruments.set( "boum-boum", "drum");
+
 
 /*
  * New instance of musician
@@ -66,9 +66,9 @@ socket.on('message', (msg,rinfo) => {
     var newSound = JSON.parse(msg);
     // let instru = new Instru(rinfo.uuid, rinfo.sound);
     var instrument = {
-                      'uuid': newSound.uuid,
-                      'instrument': (_.invert(instruments))[newSound.sound],
-                      'activeSince': moment().toISOString()
+                      uuid : newSound.uuid,
+                      instrument : instruments.get(newSound.sound),
+                      activeSince: moment().toISOString()
                      };
 
     musician.set(instrument.uuid, instrument);
@@ -87,7 +87,6 @@ var server = net.createServer((soc) => {
         arraymus.push(value);
       }
     }
-
     soc.end(JSON.stringify(arraymus));
 });
 
