@@ -6,18 +6,30 @@ const dgram = require('dgram');
 /*
  * New instances of dgram.Socket 
  */
-const server = dgram.createSocket('udp4');
+const socket = dgram.createSocket('udp4');
+var _ = require('lodash');
+
+/**
+ *  for TCP network 
+ */
+var net = require('net');
+/**
+ *  for load date 
+ */
+var moment = require('moment');
 /*
  * Generate a v4 UUID (random) 
  */
-const multicastPort    = 8080;
-const multicastAddress = "239.255.22.5";
+const multicastPort    = 1111;
+const tcpPort          = 2205;
+const multicastAddress = "239.255.99.5";
+const tcpAddress       = "0.0.0.0";
 
 const uuid = require('uuid');
 const { v4: uuidv4 } = require('uuid');
 
 /*
- * New instances of dgram.Socket 
+ * New instances of map instrument and son
  */
 const instruments = new Map([
                             ["piano", "ti-ta-ti"],
@@ -26,6 +38,11 @@ const instruments = new Map([
                             ["violin", "gzi-gzi"],
                             ["drum", "boum-boum"]
                             ]);
+
+/*
+ * New instance of musician
+ */
+var musician = new Map();
 /*
  * verification of user input 
  */
@@ -33,80 +50,45 @@ if(process.argv.length != 2){
     console.log('Invalid numbers of arguments');
     console.log('Usage: node app.js <>');
     return;
-}
-
-server.on('message', (msg, rinfo) => {
-
-    rinfo = JSON.parse(rinfo);
-	console.log("Ad has arrived: '" + msg + "'. Source address: " + rinfo.address + ", source port: " + rinfo.port);
-  });
-  
+}  
 
 /*
  * Tells the kernel to join a source-specific multicast
  * channel at the given sourceAddress and groupAddress 
  */
-server.bind(multicastPort, () => {
-    server.addMembership(multicastAddress);
+socket.bind(multicastPort, () => {
+  console.log('listen on port: %j',socket.address());
+  socket.addMembership(multicastAddress);
   });
 
-/**
- * Load the name of instrument input by user
- */
-var instrument = process.argv[2];
-/**
- * Load the name of instrument input by user
- */
-var sound = instruments.get(instrument);
+socket.on('message', (msg,rinfo) => {
 
-/**
- * Check if instrument input is in Map
- */
-if(sound == null){
-    console.log('Invalid instrument');
-    return;
-}
+    var newSound = JSON.parse(msg);
+    // let instru = new Instru(rinfo.uuid, rinfo.sound);
+    var instrument = {
+                      'uuid': newSound.uuid,
+                      'instrument': (_.invert(instruments))[newSound.sound],
+                      'activeSince': moment().toISOString()
+                     };
 
-class Instru {
+    musician.set(instrument.uuid, instrument);
+                    
+    console.log("Ad has arrived: '" + msg + "'. Source address: " + 
+                rinfo.address + ", source port: " + rinfo.port);
+});
 
-    constructor(uuid, sound) {
-      this.uuid = uuid;
-      this.sound  = sound;
+var server = net.createServer((soc) => {
+    var arraymus = new Array();
+
+    for(var [key, value] of musician.entries()){
+      if(moment().diff(value.activeSince, 'seconds') > 5){
+        musician.delete(key);
+      }else{
+        arraymus.push(value);
+      }
     }
-  
-    update() {
-        var  payload = JSON.stringify(this);
-        var  message = new Buffer(payload);
-        server.send(message, 0, message.length, multicastPort, multicastAddress, (err, bytes) => {
 
-            //console.log(`server error:\n${err.stack}`);
-            console.log("Sending ad: " + payload + " via port " + server.address().port);
-            
-        });
-        setInterval(this.update.bind(this), 1000);
-    };
-   // this.update.bind(this),1000
-  }
-  
-  let instru = new Instru(uuidv4(), sound);
-  instru.update();
-  
+    soc.end(JSON.stringify(arraymus));
+});
 
-
-
-
-  server.on('error', (err) => {
-    console.log(`server error:\n${err.stack}`);
-    server.close();
-  });
-  
-  server.on('message', (msg, rinfo) => {
-    console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-  });
-  
-  server.on('listening', () => {
-    const address = server.address();
-    console.log(`server listening ${address.address}:${address.port}`);
-  });
-  
-  server.bind(41234);
+server.listen(tcpPort, tcpAddress);

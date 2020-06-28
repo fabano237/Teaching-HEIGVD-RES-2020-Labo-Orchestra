@@ -11,13 +11,13 @@ const server = dgram.createSocket('udp4');
  * Generate a v4 UUID (random) 
  */
 const multicastPort    = 1111;
-const multicastAddress = "239.255.99.11";
+const multicastAddress = "239.255.99.5";
 
-const uuid = require('uuid');
+//const uuid = require('uuid');
 const { v4: uuidv4 } = require('uuid');
 
 /*
- * New instances of dgram.Socket 
+ * New instances of map instrument and son
  */
 const instruments = new Map([
                             ["piano", "ti-ta-ti"],
@@ -68,9 +68,8 @@ class Instru {
             console.log("Sending ad: " + payload + " via port " + server.address().port);
             
         });
-        setInterval(this.update.bind(this), 100000);
+        setInterval(this.update.bind(this), 5000);
     };
-   // this.update.bind(this),1000
   }
   
   let instru = new Instru(uuidv4(), sound);
